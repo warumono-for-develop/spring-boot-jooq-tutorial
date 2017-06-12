@@ -1,0 +1,69 @@
+buildscript {
+	ext {
+		springBootVersion = '1.5.2.RELEASE'
+	}
+	repositories {
+		mavenCentral()
+	}
+	dependencies {
+		classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+		classpath("org.jooq:jooq-codegen:3.9.2")
+		classpath("com.h2database:h2:1.4.195")
+	}
+}
+
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'org.springframework.boot'
+
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = 1.8
+
+repositories {
+	mavenCentral()
+}
+
+
+dependencies {
+	compile('org.springframework.boot:spring-boot-starter-jooq')
+	compile('org.springframework.boot:spring-boot-starter-web')
+	compile('org.jooq:jooq-codegen:3.9.2')
+	runtime('org.springframework.boot:spring-boot-devtools')
+	runtime('com.h2database:h2')
+	compileOnly('org.projectlombok:lombok')
+	testCompile('org.springframework.boot:spring-boot-starter-test')
+}
+
+// Use your favourite XML builder to construct the code generation configuration file
+// ----------------------------------------------------------------------------------
+def writer = new StringWriter()
+def xml = new groovy.xml.MarkupBuilder(writer).configuration('xmlns': 'http://www.jooq.org/xsd/jooq-codegen-3.9.2.xsd') {
+	jdbc() {
+		driver('org.h2.Driver')
+		url('jdbc:h2:~/springbootjooqtutorial')
+		user('sa')
+		password('')
+	}
+	generator() {
+		database() {
+		}
+		// Watch out for this caveat when using MarkupBuilder with "reserved names"
+		// - https://github.com/jOOQ/jOOQ/issues/4797
+		// - http://stackoverflow.com/a/11389034/521799
+		// - https://groups.google.com/forum/#!topic/jooq-user/wi4S9rRxk4A
+		generate([:]) {
+			pojos true
+			daos true
+		}
+		target() {
+			packageName('com.warumono.databases')
+			directory('src/main/java')
+		}
+	}
+}
+
+// Run the code generator
+// ----------------------
+org.jooq.util.GenerationTool.generate(
+	javax.xml.bind.JAXB.unmarshal(new StringReader(writer.toString()), org.jooq.util.jaxb.Configuration.class)
+)
